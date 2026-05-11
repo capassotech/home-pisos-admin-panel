@@ -15,18 +15,43 @@ interface ProductFormProps {
   submitLabel?: string;
 }
 
+const NUMERIC_FIELDS = new Set(["Price", "M2PerBox"]);
+
 const EMPTY_FORM = {
   Name: "",
   Description: "",
-  Price: 0,
+  Price: 0 as number,
   PriceType: "",
-  M2PerBox: "",
+  M2PerBox: "" as number | "",
   IdCategory: "",
   IsFeatured: false,
   Size: "",
   ImageUrls: [] as string[],
   RequiresQuote: false,
 };
+
+/**
+ * Convierte precio/cantidad a número finito para persistencia y consumo por pasarelas (p. ej. Mercado Pago).
+ * Los inputs HTML devuelven string; Firebase puede tener datos legados como string.
+ * Mercado Pago rechaza la preferencia si `unit_price` no es estrictamente Number, por eso forzamos coerción acá.
+ */
+function parsePriceToNumber(raw: unknown): number {
+  if (typeof raw === "number" && Number.isFinite(raw)) return raw;
+  if (raw == null || raw === "") return 0;
+  const n = Number.parseFloat(String(raw).trim().replace(",", "."));
+  return Number.isFinite(n) ? n : 0;
+}
+
+/** Devuelve string vacío sólo cuando no hay valor; en otro caso, Number puro */
+function parseOptionalNumber(raw: unknown): number | "" {
+  if (raw == null || raw === "") return "";
+  const n = parsePriceToNumber(raw);
+  return n;
+}
+
+function normalizeM2PerBoxForForm(raw: unknown): number | "" {
+  return parseOptionalNumber(raw);
+}
 
 /** Coincide con los <option value> del select; tolera camelCase y variantes en Firebase */
 function normalizePriceTypeForForm(raw: unknown): string {
@@ -47,11 +72,13 @@ function normalizePriceTypeForForm(raw: unknown): string {
 function buildFormState(product?: any) {
   if (!product) return { ...EMPTY_FORM };
   const rawType = product.PriceType ?? product.priceType;
+  const rawM2 = product.M2PerBox ?? product.m2PerBox;
   return {
     ...EMPTY_FORM,
     ...product,
+    Price: parsePriceToNumber(product.Price ?? product.price),
     PriceType: normalizePriceTypeForForm(rawType),
-    M2PerBox: product.M2PerBox ?? product.m2PerBox ?? "",
+    M2PerBox: normalizeM2PerBoxForForm(rawM2),
   };
 }
 
@@ -109,6 +136,13 @@ const ProductForm = ({
 
   const handleChange = (e: any) => {
     const { name, value } = e.target;
+    if (NUMERIC_FIELDS.has(name)) {
+      setFormData((prev: any) => ({
+        ...prev,
+        [name]: name === "M2PerBox" ? parseOptionalNumber(value) : parsePriceToNumber(value),
+      }));
+      return;
+    }
     setFormData((prev: any) => ({ ...prev, [name]: value }));
   };
 
@@ -150,7 +184,31 @@ const ProductForm = ({
       };
     }
 
-    await onSave(finalData);
+    const normalizedPrice = parsePriceToNumber(finalData.Price);
+    const normalizedM2 = parseOptionalNumber(finalData.M2PerBox);
+
+    if (!Number.isFinite(normalizedPrice) || normalizedPrice <= 0) {
+      setIsUploading(false);
+      alert("El precio debe ser un número mayor a 0.");
+      return;
+    }
+
+    if (
+      finalData.PriceType === "por m²" &&
+      (normalizedM2 === "" || !Number.isFinite(normalizedM2 as number) || (normalizedM2 as number) <= 0)
+    ) {
+      setIsUploading(false);
+      alert("Indicá un valor válido de m² por caja para productos vendidos por m².");
+      return;
+    }
+
+    const payload = {
+      ...finalData,
+      Price: normalizedPrice,
+      M2PerBox: normalizedM2 === "" ? null : (normalizedM2 as number),
+    };
+
+    await onSave(payload);
     setIsUploading(false);
 
     if (fileInput) fileInput.value = "";
