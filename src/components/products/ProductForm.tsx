@@ -15,7 +15,7 @@ interface ProductFormProps {
   submitLabel?: string;
 }
 
-const NUMERIC_FIELDS = new Set(["Price", "M2PerBox"]);
+const NUMERIC_FIELDS = new Set(["Price", "M2PerBox", "UnitsPerBox"]);
 
 const EMPTY_FORM = {
   Name: "",
@@ -23,6 +23,7 @@ const EMPTY_FORM = {
   Price: 0 as number,
   PriceType: "",
   M2PerBox: "" as number | "",
+  UnitsPerBox: "" as number | "",
   IdCategory: "",
   IsFeatured: false,
   Size: "",
@@ -79,6 +80,7 @@ function buildFormState(product?: any) {
     Price: parsePriceToNumber(product.Price ?? product.price),
     PriceType: normalizePriceTypeForForm(rawType),
     M2PerBox: normalizeM2PerBoxForForm(rawM2),
+    UnitsPerBox: parseOptionalNumber(product.UnitsPerBox ?? product.unitsPerBox),
   };
 }
 
@@ -139,7 +141,8 @@ const ProductForm = ({
     if (NUMERIC_FIELDS.has(name)) {
       setFormData((prev: any) => ({
         ...prev,
-        [name]: name === "M2PerBox" ? parseOptionalNumber(value) : parsePriceToNumber(value),
+        [name]:
+          name === "Price" ? parsePriceToNumber(value) : parseOptionalNumber(value),
       }));
       return;
     }
@@ -184,6 +187,13 @@ const ProductForm = ({
       };
     }
 
+    // Limpiar campo que no corresponde al tipo de precio
+    if (finalData.PriceType === "por unidad") {
+      finalData.M2PerBox = "";
+    } else if (finalData.PriceType === "por m²") {
+      finalData.UnitsPerBox = "";
+    }
+
     const normalizedPrice = parsePriceToNumber(finalData.Price);
     const normalizedM2 = parseOptionalNumber(finalData.M2PerBox);
 
@@ -202,10 +212,13 @@ const ProductForm = ({
       return;
     }
 
+    const normalizedUnits = parseOptionalNumber(finalData.UnitsPerBox);
+
     const payload = {
       ...finalData,
       Price: normalizedPrice,
       M2PerBox: normalizedM2 === "" ? null : (normalizedM2 as number),
+      UnitsPerBox: normalizedUnits === "" ? null : (normalizedUnits as number),
     };
 
     await onSave(payload);
@@ -310,9 +323,9 @@ const ProductForm = ({
               <option value="por m²">Precio por metro cuadrado (m²)</option>
             </select>
           </div>
-          {formData.PriceType !== "" && (
+          {formData.PriceType === "por m²" && (
             <div>
-              <Label htmlFor="M2PerBox">m² por caja{formData.PriceType === "por m²" ? " *" : " (opcional)"}</Label>
+              <Label htmlFor="M2PerBox">m² por caja *</Label>
               <Input
                 id="M2PerBox"
                 name="M2PerBox"
@@ -322,17 +335,37 @@ const ProductForm = ({
                 placeholder="Ej: 2.19"
                 value={formData.M2PerBox || ""}
                 onChange={handleChange}
-                required={formData.PriceType === "por m²"}
+                required
               />
               {formData.M2PerBox > 0 && formData.Price > 0 && (
                 <p className="text-sm text-muted-foreground mt-1">
                   Precio por caja:{" "}
                   <span className="font-semibold text-foreground">
-                    $
-                    {(formData.Price * formData.M2PerBox).toLocaleString("es-AR", {
-                      minimumFractionDigits: 0,
-                      maximumFractionDigits: 0,
-                    })}
+                    ${(formData.Price * formData.M2PerBox).toLocaleString("es-AR", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                  </span>
+                </p>
+              )}
+            </div>
+          )}
+
+          {formData.PriceType === "por unidad" && (
+            <div>
+              <Label htmlFor="UnitsPerBox">Unidades por caja (opcional)</Label>
+              <Input
+                id="UnitsPerBox"
+                name="UnitsPerBox"
+                type="number"
+                min="1"
+                step="1"
+                placeholder="Ej: 6"
+                value={formData.UnitsPerBox || ""}
+                onChange={handleChange}
+              />
+              {formData.UnitsPerBox > 0 && formData.Price > 0 && (
+                <p className="text-sm text-muted-foreground mt-1">
+                  Precio por caja:{" "}
+                  <span className="font-semibold text-foreground">
+                    ${(formData.Price * formData.UnitsPerBox).toLocaleString("es-AR", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                   </span>
                 </p>
               )}
