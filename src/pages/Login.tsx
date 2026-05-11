@@ -30,7 +30,7 @@ const Login = ({ onLogin }: LoginProps) => {
       onLogin(); // Llama al callback de inicio de sesión exitoso
     } catch (err: any) {
       setIsLoading(false);
-      if (err.code === "auth/user-not-found" || err.code === "auth/wrong-password") {
+      if (err.code === "auth/invalid-credential" || err.code === "auth/user-not-found" || err.code === "auth/wrong-password") {
         setError("Correo electrónico o contraseña incorrectos.");
       } else {
         setError("Ocurrió un error inesperado. Por favor, inténtalo de nuevo.");
