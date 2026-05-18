@@ -203,15 +203,6 @@ const ProductForm = ({
       return;
     }
 
-    if (
-      finalData.PriceType === "por m²" &&
-      (normalizedM2 === "" || !Number.isFinite(normalizedM2 as number) || (normalizedM2 as number) <= 0)
-    ) {
-      setIsUploading(false);
-      alert("Indicá un valor válido de m² por caja para productos vendidos por m².");
-      return;
-    }
-
     const normalizedUnits = parseOptionalNumber(finalData.UnitsPerBox);
 
     const payload = {
@@ -325,7 +316,7 @@ const ProductForm = ({
           </div>
           {formData.PriceType === "por m²" && (
             <div>
-              <Label htmlFor="M2PerBox">m² por caja *</Label>
+              <Label htmlFor="M2PerBox">m² por caja (opcional)</Label>
               <Input
                 id="M2PerBox"
                 name="M2PerBox"
@@ -335,7 +326,6 @@ const ProductForm = ({
                 placeholder="Ej: 2.19"
                 value={formData.M2PerBox || ""}
                 onChange={handleChange}
-                required
               />
               {formData.M2PerBox > 0 && formData.Price > 0 && (
                 <p className="text-sm text-muted-foreground mt-1">
