@@ -173,19 +173,10 @@ const ProductForm = ({
 
   const handleSubmit = async (e: any) => {
     e.preventDefault();
-    const fileInput: any = document.getElementById("images");
 
     setIsUploading(true);
 
     let finalData = { ...formData };
-
-    if (fileInput && fileInput.files.length > 0) {
-      const uploadedUrls = await handleImageUpload({ target: fileInput });
-      finalData = {
-        ...finalData,
-        ImageUrls: [...(finalData.ImageUrls || []), ...uploadedUrls],
-      };
-    }
 
     // Limpiar campo que no corresponde al tipo de precio
     if (finalData.PriceType === "por unidad") {
@@ -215,7 +206,6 @@ const ProductForm = ({
     await onSave(payload);
     setIsUploading(false);
 
-    if (fileInput) fileInput.value = "";
   };
 
   return (
@@ -363,6 +353,32 @@ const ProductForm = ({
           )}
           <div>
             <Label htmlFor="images">Imágenes</Label>
+            {/* Miniaturas de imágenes existentes */}
+            {formData.ImageUrls && formData.ImageUrls.length > 0 && (
+              <div className="flex flex-wrap gap-2 mb-3">
+                {formData.ImageUrls.map((url: string, index: number) => (
+                  <div key={index} className="relative w-20 h-20">
+                    <img
+                      src={url}
+                      alt={`Imagen ${index + 1}`}
+                      className="w-full h-full object-cover rounded-md border"
+                    />
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setFormData((prev: any) => ({
+                          ...prev,
+                          ImageUrls: prev.ImageUrls.filter((_: string, i: number) => i !== index),
+                        }))
+                      }
+                      className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs hover:bg-red-600"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
             <Input
               id="images"
               type="file"
