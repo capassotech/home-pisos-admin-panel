@@ -19,6 +19,7 @@ interface ConnectionStatus {
 }
 
 const API_URL = import.meta.env.VITE_API_URL || "https://home-pisos-backend.onrender.com";
+const MP_OAUTH_PENDING_KEY = "mp_oauth_pending";
 
 const MercadoPago = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -44,14 +45,31 @@ const MercadoPago = () => {
     const reason = searchParams.get("reason");
 
     if (oauthStatus === "success") {
+      sessionStorage.removeItem(MP_OAUTH_PENDING_KEY);
       toast.success("Cuenta de Mercado Pago conectada correctamente.");
       setSearchParams({}, { replace: true });
     } else if (oauthStatus === "error") {
+      sessionStorage.removeItem(MP_OAUTH_PENDING_KEY);
+      setConnecting(false);
       toast.error(`Error al conectar: ${reason || "error desconocido"}`);
       setSearchParams({}, { replace: true });
+    } else if (sessionStorage.getItem(MP_OAUTH_PENDING_KEY)) {
+      // Volvió atrás sin completar OAuth (bfcache o recarga)
+      sessionStorage.removeItem(MP_OAUTH_PENDING_KEY);
+      setConnecting(false);
     }
 
+    const onPageShow = () => {
+      if (sessionStorage.getItem(MP_OAUTH_PENDING_KEY)) {
+        sessionStorage.removeItem(MP_OAUTH_PENDING_KEY);
+        setConnecting(false);
+      }
+    };
+
+    window.addEventListener("pageshow", onPageShow);
     fetchStatus();
+
+    return () => window.removeEventListener("pageshow", onPageShow);
   }, []);
 
   const handleConnect = async () => {
@@ -61,9 +79,11 @@ const MercadoPago = () => {
       if (!res.ok) {
         const data = await res.json();
         toast.error(data.error || "No se pudo iniciar la conexión.");
+        setConnecting(false);
         return;
       }
       const { url } = await res.json();
+      sessionStorage.setItem(MP_OAUTH_PENDING_KEY, "1");
       window.location.href = url;
     } catch {
       toast.error("Error al conectar con Mercado Pago.");
