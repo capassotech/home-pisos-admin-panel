@@ -173,20 +173,8 @@ const CategoryListRow = ({ category, categories, onEdit, onDelete, onToggleFeatu
         <Folder size={18} />
       </div>
 
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 min-w-0">
-          <p className="text-sm font-medium truncate">{category.Name}</p>
-          {category.IsFeatured && (
-            <Badge className="bg-amber-500 text-white text-[10px] px-1.5 py-0 shrink-0">
-              Destacada
-            </Badge>
-          )}
-          {category.IsSuperCategory && (
-            <Badge variant="outline" className="text-[10px] px-1.5 py-0 shrink-0">
-              Supercategoría
-            </Badge>
-          )}
-        </div>
+      <div className="flex-1 min-w-0 overflow-hidden">
+        <p className="text-sm font-medium truncate">{category.Name}</p>
         <div className="flex items-center gap-2 mt-0.5 flex-wrap">
           {parentName ? (
             <span className="text-xs text-muted-foreground truncate">Bajo: {parentName}</span>
@@ -204,7 +192,22 @@ const CategoryListRow = ({ category, categories, onEdit, onDelete, onToggleFeatu
         </div>
       </div>
 
-      <div className="flex items-center gap-1 shrink-0">
+      <div className="flex flex-col items-end gap-1.5 shrink-0">
+        {(category.IsFeatured || category.IsSuperCategory) && (
+          <div className="flex flex-wrap justify-end gap-1">
+            {category.IsFeatured && (
+              <Badge className="bg-amber-500 text-white text-[10px] px-1.5 py-0">
+                Destacada
+              </Badge>
+            )}
+            {category.IsSuperCategory && (
+              <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                Supercategoría
+              </Badge>
+            )}
+          </div>
+        )}
+        <div className="flex items-center gap-1">
         <Button
           size="sm"
           variant="outline"
@@ -240,6 +243,7 @@ const CategoryListRow = ({ category, categories, onEdit, onDelete, onToggleFeatu
         >
           <Trash2 size={14} />
         </Button>
+        </div>
       </div>
     </motion.div>
   );
