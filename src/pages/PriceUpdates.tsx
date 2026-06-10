@@ -19,10 +19,11 @@ import {
   CheckCircle,
 } from "lucide-react";
 import { motion } from "framer-motion";
+import { toast } from "sonner";
 import { database } from "@/firebase";
 import { ref as dbRef, get, onValue, push, update } from "firebase/database";
 
-const BulkPriceUpdateForm = ({ onSubmit, onCancel }) => {
+const BulkPriceUpdateForm = ({ onSubmit, onCancel, isSaving = false }) => {
   const [percentage, setPercentage] = useState("");
   const [categories, setCategories] = useState([]);
   const [availableCategories, setAvailableCategories] = useState([]);
@@ -134,10 +135,12 @@ const BulkPriceUpdateForm = ({ onSubmit, onCancel }) => {
             </p>
           </div>
           <div className="flex justify-end space-x-2 pt-4">
-            <Button type="button" variant="outline" onClick={onCancel}>
+            <Button type="button" variant="outline" onClick={onCancel} disabled={isSaving}>
               Cancelar
             </Button>
-            <Button type="submit">Actualizar precios</Button>
+            <Button type="submit" disabled={isSaving}>
+              {isSaving ? "Actualizando..." : "Actualizar precios"}
+            </Button>
           </div>
         </form>
       </div>
@@ -234,6 +237,7 @@ const PriceHistoryCard = ({ history, index }) => {
 
 const PriceUpdates = () => {
   const [isUpdatingPrices, setIsUpdatingPrices] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [activeTab, setActiveTab] = useState("bulk");
   const [priceHistory, setPriceHistory] = useState([]);
 
@@ -255,12 +259,13 @@ const PriceUpdates = () => {
   }, []);
 
   const handleBulkUpdate = async (updateData) => {
+    setIsSaving(true);
     try {
       // Referencia a los productos en Firebase
       const productsRef = dbRef(database, "Product");
       const snapshot = await get(productsRef);
       if (!snapshot.exists()) {
-        console.warn("No hay productos disponibles para actualizar.");
+        toast.error("No hay productos disponibles para actualizar.");
         return;
       }
       const products = snapshot.val();
@@ -307,9 +312,18 @@ const PriceUpdates = () => {
       ]);
 
       setIsUpdatingPrices(false);
-      console.log("Precios actualizados exitosamente.");
+      toast.success("Precios actualizados exitosamente.", {
+        classNames: {
+          toast: "!bg-emerald-600 !text-white !border-emerald-700",
+          title: "!text-white",
+          description: "!text-emerald-50",
+        },
+      });
     } catch (error) {
       console.error("Error al actualizar los precios:", error);
+      toast.error("Error al actualizar los precios. Por favor, inténtelo de nuevo.");
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -334,7 +348,8 @@ const PriceUpdates = () => {
           {isUpdatingPrices ? (
             <BulkPriceUpdateForm
               onSubmit={handleBulkUpdate}
-              onCancel={() => setIsUpdatingPrices(false)}
+              onCancel={() => !isSaving && setIsUpdatingPrices(false)}
+              isSaving={isSaving}
             />
           ) : (
             <div className="text-center py-12 bg-card border rounded-lg">
