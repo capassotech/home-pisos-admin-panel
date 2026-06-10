@@ -20,7 +20,7 @@ const NUMERIC_FIELDS = new Set(["Price", "M2PerBox", "UnitsPerBox"]);
 const EMPTY_FORM = {
   Name: "",
   Description: "",
-  Price: 0 as number,
+  Price: "" as number | "",
   PriceType: "",
   M2PerBox: "" as number | "",
   UnitsPerBox: "" as number | "",
@@ -141,8 +141,7 @@ const ProductForm = ({
     if (NUMERIC_FIELDS.has(name)) {
       setFormData((prev: any) => ({
         ...prev,
-        [name]:
-          name === "Price" ? parsePriceToNumber(value) : parseOptionalNumber(value),
+        [name]: parseOptionalNumber(value),
       }));
       return;
     }
@@ -272,8 +271,10 @@ const ProductForm = ({
               id="Price"
               name="Price"
               type="number"
-              placeholder="Precio del producto"
-              value={formData.Price}
+              step="0.01"
+              min="0"
+              placeholder="Ej: 1500"
+              value={formData.Price === "" ? "" : formData.Price}
               onChange={handleChange}
               required
             />
